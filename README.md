@@ -1,1 +1,0 @@
-# qr-photo-app
