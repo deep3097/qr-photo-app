@@ -1,7 +1,6 @@
 import streamlit as st
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 import qrcode
-import os
 import io
 
 st.title("📸 QR Designer App")
@@ -22,41 +21,44 @@ description = st.text_area("📝 Enter Description")
 font_path = "Poppins-Bold.ttf"
 
 if uploaded_file and design_link:
-    image = Image.open(uploaded_file).convert("RGBA")
+    # 🛠️ Fix rotation issue using EXIF transpose
+    image = Image.open(uploaded_file)
+    image = ImageOps.exif_transpose(image).convert("RGBA")
     draw = ImageDraw.Draw(image)
 
-    # Extract design no from link
-    design_no = design_link.strip().split("/")[-1]  # last part after '/'
+    # Extract design number from link
+    design_no = design_link.strip().split("/")[-1]
 
-    # Generate QR Code from link
+    # Generate QR Code
     qr = qrcode.QRCode(version=1, box_size=10, border=1)
     qr.add_data(design_link)
     qr.make(fit=True)
     qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGBA")
     qr_img = qr_img.resize((180, 180))
 
-    # Paste QR code (top-right)
-    image.paste(qr_img, (image.width - qr_img.width - 20, 20))
+    # Paste QR Code (top-right)
+    image.paste(qr_img, (image.width - qr_img.width - 20, 20), qr_img)
 
-    # Load font
+    # Load custom font or fallback
     try:
         font = ImageFont.truetype(font_path, 42)
     except:
         font = ImageFont.load_default()
         st.warning("⚠️ Custom font not found, using default.")
 
-    # Draw text (without link)
+    # Draw text
     draw.text((20, 20), f"{design_no}", font=font, fill="black")
     if rate:
         draw.text((20, 90), f"₹{rate}", font=font, fill="black")
     if description:
         draw.text((20, 160), f"{description}", font=font, fill="black")
 
-    # Save image
+    # Save to BytesIO
     output_bytes = io.BytesIO()
     image.convert("RGB").save(output_bytes, format='JPEG')
     output_bytes.seek(0)
 
+    # Display and download
     st.image(image, caption="✅ Final Image", use_column_width=True)
     st.download_button(
         label="📥 Download Final Image",
