@@ -3,9 +3,13 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 import qrcode
 import io
 
-# HEIC support enable
-import pillow_heif
-pillow_heif.register_heif_opener()
+# HEIC optional support
+try:
+    import pillow_heif
+    pillow_heif.register_heif_opener()
+    heif_enabled = True
+except ImportError:
+    heif_enabled = False
 
 st.title("📸 QR Designer App")
 
@@ -71,13 +75,13 @@ if uploaded_file and design_link:
     output_png.seek(0)
 
     output_heic = io.BytesIO()
-    heic_supported = True
-    try:
-        image.convert("RGB").save(output_heic, format="HEIC")
-        output_heic.seek(0)
-    except Exception:
-        heic_supported = False
-        st.warning("⚠️ HEIC format not supported on this system. Install `pillow-heif` package.")
+    if heif_enabled:
+        try:
+            image.convert("RGB").save(output_heic, format="HEIC")
+            output_heic.seek(0)
+        except Exception:
+            heif_enabled = False
+            st.warning("⚠️ HEIC export failed. JPG/PNG still available.")
 
     # Display image preview
     st.image(image, caption="✅ Final Image", use_column_width=True)
@@ -97,10 +101,12 @@ if uploaded_file and design_link:
         mime="image/png"
     )
 
-    if heic_supported:
+    if heif_enabled:
         st.download_button(
             label="📥 Download HEIC",
             data=output_heic,
             file_name=f"QR_{design_no}.heic",
             mime="image/heic"
         )
+    else:
+        st.info("ℹ️ HEIC support not available. Install `pillow-heif` to enable.")
