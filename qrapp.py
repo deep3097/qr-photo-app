@@ -6,7 +6,7 @@ import io
 st.title("📸 QR Designer App")
 
 # Upload image
-uploaded_file = st.file_uploader("📁 Upload Image (JPG/PNG)", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("📁 Upload Image (JPG/PNG/HEIC)", type=["jpg", "jpeg", "png", "heic"])
 
 # Link input (Design No is extracted from this)
 design_link = st.text_input("🌐 Enter Design Link (e.g., https://abc.com/ABSK-7063)")
@@ -53,16 +53,47 @@ if uploaded_file and design_link:
     if description:
         draw.text((20, 160), f"{description}", font=font, fill="black")
 
-    # Save to BytesIO
-    output_bytes = io.BytesIO()
-    image.convert("RGB").save(output_bytes, format='JPEG')
-    output_bytes.seek(0)
+    # Convert image for different formats
+    output_jpg = io.BytesIO()
+    image.convert("RGB").save(output_jpg, format="JPEG")
+    output_jpg.seek(0)
 
-    # Display and download
+    output_png = io.BytesIO()
+    image.save(output_png, format="PNG")
+    output_png.seek(0)
+
+    output_heic = io.BytesIO()
+    try:
+        # HEIC support (needs pillow-heif installed: pip install pillow-heif)
+        image.convert("RGB").save(output_heic, format="HEIC")
+        output_heic.seek(0)
+        heic_supported = True
+    except Exception as e:
+        heic_supported = False
+        st.warning("⚠️ HEIC format not supported on this system. Install `pillow-heif` package.")
+
+    # Display image preview
     st.image(image, caption="✅ Final Image", use_column_width=True)
+
+    # Download buttons
     st.download_button(
-        label="📥 Download Final Image",
-        data=output_bytes,
+        label="📥 Download JPG",
+        data=output_jpg,
         file_name=f"QR_{design_no}.jpg",
         mime="image/jpeg"
     )
+
+    st.download_button(
+        label="📥 Download PNG",
+        data=output_png,
+        file_name=f"QR_{design_no}.png",
+        mime="image/png"
+    )
+
+    if heic_supported:
+        st.download_button(
+            label="📥 Download HEIC",
+            data=output_heic,
+            file_name=f"QR_{design_no}.heic",
+            mime="image/heic"
+        )
