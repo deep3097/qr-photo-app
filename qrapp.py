@@ -3,6 +3,10 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 import qrcode
 import io
 
+# HEIC support enable
+import pillow_heif
+pillow_heif.register_heif_opener()
+
 st.title("📸 QR Designer App")
 
 # Upload image
@@ -21,10 +25,14 @@ description = st.text_area("📝 Enter Description")
 font_path = "Poppins-Bold.ttf"
 
 if uploaded_file and design_link:
-    # 🛠️ Fix rotation issue using EXIF transpose
-    image = Image.open(uploaded_file)
-    image = ImageOps.exif_transpose(image).convert("RGBA")
-    draw = ImageDraw.Draw(image)
+    try:
+        # 🛠️ Fix rotation issue using EXIF transpose
+        image = Image.open(uploaded_file)
+        image = ImageOps.exif_transpose(image).convert("RGBA")
+        draw = ImageDraw.Draw(image)
+    except Exception as e:
+        st.error(f"❌ Could not open image: {e}")
+        st.stop()
 
     # Extract design number from link
     design_no = design_link.strip().split("/")[-1]
@@ -63,12 +71,11 @@ if uploaded_file and design_link:
     output_png.seek(0)
 
     output_heic = io.BytesIO()
+    heic_supported = True
     try:
-        # HEIC support (needs pillow-heif installed: pip install pillow-heif)
         image.convert("RGB").save(output_heic, format="HEIC")
         output_heic.seek(0)
-        heic_supported = True
-    except Exception as e:
+    except Exception:
         heic_supported = False
         st.warning("⚠️ HEIC format not supported on this system. Install `pillow-heif` package.")
 
